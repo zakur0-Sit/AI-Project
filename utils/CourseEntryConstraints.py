@@ -7,7 +7,7 @@ class Constraints:
     teacher_unavailable: list[tuple[Teacher, list[TimeInterval]]]
     teacher_daily_num_of_classes: list[Teacher, list[tuple[Weekday, int]]]
 
-    optional_course_types: list[tuple[Course, list[CourseType]]] # Some courses don't have Lectures
+    optional_course_types: list[tuple[Course, list[CourseType]]]  # Some courses don't have Lectures
 
     def __init__(self):
         self.teacher_for_course = []

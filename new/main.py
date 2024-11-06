@@ -1,27 +1,33 @@
 import json
 from new.utils.CourseEntry import Classroom, Course, TimeInterval, Teacher, StudentGroup
-from new.utils.CourseEntryConstraints import TableData, Constraints
+from new.utils.CourseEntryConstraints import TableData, SoftConstraints
 
 if __name__ == "__main__":
     table_data = TableData()
 
-    with open("teachers.json", encoding='utf-8') as f:
+    with open("../input_data/json/teachers.json", encoding='utf-8') as f:
         data = json.load(f)
+
+    with open("../input_data/json/default_values.json", encoding='utf-8') as f:
+        default_values = json.load(f)
+
+    with open("../input_data/json/hard_constraints.json", encoding='utf-8') as f:
+        hard_constraints = json.load(f)
 
     for teacher_data in data:
         teacher = Teacher(teacher_data["full_name"])
-        table_data.teachers.append(teacher)
+        # table_data.teachers.append(teacher)
 
         for subject in teacher_data["subjects"]:
-            table_data.courses.append(Course(subject["name"], subject["optional"]))
+            # table_data.courses.append(Course(subject["name"], subject["optional"]))
 
             table_data.constraints.teacher_for_course.append((teacher, subject["name"]))
 
             for activity in subject["activities"]:
-                table_data.classrooms.extend([Classroom(cabinet) for cabinet in activity["cabinets"]])
+                # table_data.classrooms.extend([Classroom(cabinet) for cabinet in activity["cabinets"]])
 
                 for group in activity["groups"]:
-                    table_data.student_groups.extend([StudentGroup(group) for group in activity["groups"]])
+                    # table_data.student_groups.extend([StudentGroup(group) for group in activity["groups"]])
 
                     for day, hours in activity["days"].items():
                         for hour in hours:
@@ -36,6 +42,20 @@ if __name__ == "__main__":
 
                 daily_num_classes = len(hours)
                 table_data.constraints.add_teacher_daily_num_of_classes(teacher, constraint_day.upper(), daily_num_classes)
+
+    for values in default_values[0]["classes"]:
+        table_data.classrooms.append(Classroom(values))
+
+    for values in default_values[0]["groups"]:
+        table_data.student_groups.append(StudentGroup(values))
+
+    for values in default_values[0]["professors"]:
+        table_data.teachers.append(Teacher(values))
+
+    for course_data in default_values[0]["courses"]:
+        name, is_optional = course_data
+        course = Course(name, is_optional)
+        table_data.courses.append(course)
 
     table_data.classrooms = list(set(table_data.classrooms))
     table_data.student_groups = list(set(table_data.student_groups))

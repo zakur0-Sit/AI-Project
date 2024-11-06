@@ -1,6 +1,6 @@
 from new.utils.CourseEntry import TimeInterval, Teacher, SubjectType, Course, StudentGroup, Classroom, CourseEntry
 
-class Constraints:
+class SoftConstraints:
     def __init__(self):
         self.teacher_for_course = []
         self.teacher_available = []
@@ -25,7 +25,7 @@ class Constraints:
         self.optional_course_types.append((course, course_types))
 
     def __repr__(self):
-        return (f"Constraints:\n"
+        return (f"SoftConstraints:\n"
                 f"Teachers for courses: {self.teacher_for_course}\n"
                 f"Available teachers: {self.teacher_available}\n"
                 f"Unavailable teachers: {self.teacher_unavailable}\n"
@@ -39,7 +39,7 @@ class TableData:
         self.classrooms = []
         self.student_groups = []
         self.teachers = []
-        self.constraints = Constraints()
+        self.constraints = SoftConstraints()
 
     def __repr__(self):
         return (f"TableData:\n"
@@ -47,4 +47,4 @@ class TableData:
                 f"Classrooms: {self.classrooms}\n"
                 f"Student groups: {self.student_groups}\n"
                 f"Teachers: {self.teachers}\n"
-                f"Constraints: {self.constraints}")
+                f"SoftConstraints: {self.constraints}")

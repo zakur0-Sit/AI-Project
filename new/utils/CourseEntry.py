@@ -30,14 +30,21 @@ class SubjectType(Enum):
 
 class Course:
     name: str
-    is_optional: bool
+    is_optional: str
 
     def __init__(self, name, is_optional):
         self.name = name
+        if is_optional == 0:
+            is_optional = "obligatoriu"
+        elif is_optional == 1:
+            is_optional = "optional"
+        else:
+            is_optional = "facultativ"
+
         self.is_optional = is_optional
 
     def __repr__(self):
-        return f"{self.name}"  # - {'optional' if self.is_optional else 'mandatory'}"
+        return f"{self.name} - {self.is_optional}"  # - {'optional' if self.is_optional else 'mandatory'}"
 
     def __eq__(self, other):
         return self.name.strip() == other.name.strip()
