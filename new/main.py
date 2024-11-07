@@ -15,7 +15,8 @@ def ac3(domain_values, courses_info):
         _, teacher2, group2 = var2
         return teacher1 == teacher2 or group1 == group2
 
-
+    # Removing inconsistency values from dom[xi],
+    #       if there is no value in dom[xj] that can assure consistency with that value
     def remove_inconsistent_values(xi, xj, domains):
         removed = False
         for x in domains[xi][:]:
@@ -29,6 +30,8 @@ def ac3(domain_values, courses_info):
         queue = deque(arcs)
         while queue:
             (xi, xj) = queue.popleft()
+
+            # If we removed an inconsistency value from xi, we should update all the arcs which end in xi
             if remove_inconsistent_values(xi, xj, domains):
                 for xk in [arc[0] for arc in arcs if arc[1] == xi]:
                     queue.append((xk, xi))
