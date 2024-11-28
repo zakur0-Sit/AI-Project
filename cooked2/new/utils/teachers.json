@@ -1,0 +1,105 @@
+[
+  {
+    "full_name": "Vitcu Anca",
+    "subjects": [
+      {
+        "name": "Animație 3D: algoritmi și tehnici fundamentale",
+        "optional": "True",
+        "activities": [
+          {
+            "type": "course",
+            "groups": ["A", "B", "E"],
+            "cabinets": ["C2"],
+            "days":
+            {
+              "Monday": ["12:00-14:00"]
+            }
+          },
+          {
+            "type": "seminary",
+            "groups": ["B1", "B2", "B3", "B4", "A1", "A2", "A3", "A4", "A5", "E1", "E2", "E3"],
+            "cabinets": ["C909"],
+            "days":
+            {
+              "Friday": ["14:00-16:00", "16:00-18:00", "18:00-20:00"]
+            }
+          }
+        ]
+      }
+    ],
+    "constraints":
+    {
+      "min_hours": 10,
+      "max_hours": 20,
+      "unavailability":
+      {
+        "Monday": ["08:00-20:00"],
+        "Tuesday": ["08:00-20:00"],
+        "Wednesday": ["08:00-20:00"],
+        "Thursday": ["08:00-20:00"],
+        "Friday": ["08:00-20:00"],
+        "Saturday": ["08:00-20:00"]
+      }
+    }
+  },
+
+  {
+    "full_name": "Gavriluț Dragoș",
+    "subjects": [
+      {
+        "name": "Programare în Python",
+        "optional": "False",
+        "activities": [
+          {
+            "type": "course",
+            "groups": ["A", "B", "E"],
+            "cabinets": ["C309"],
+            "days":
+            {
+              "Monday": ["17:00-18:00", "18:00-19:00", "19:00-20:00"]
+            }
+          }
+        ]
+      }
+    ],
+    "constraints":
+    {
+      "min_hours": 10,
+      "max_hours": 20,
+      "unavailability":
+      {
+        "Monday": ["08:00-14:00"]
+      }
+    }
+  },
+
+  {
+    "full_name": "Țiplea Ferucio Laurențiu",
+    "subjects": [
+      {
+        "name": "Securitatea Informației",
+        "optional": "False",
+        "activities": [
+          {
+            "type": "course",
+            "groups": ["A", "B"],
+            "cabinets": ["C2", "C309"],
+            "days":
+            {
+              "Tuesday": ["08:00-10:00", "10:00-12:00"]
+            }
+          }
+        ]
+      }
+    ],
+    "constraints":
+    {
+      "min_hours": 10,
+      "max_hours": 20,
+      "unavailability":
+      {
+        "Wednesday": ["08:00-12:00"]
+      }
+    }
+  }
+]
