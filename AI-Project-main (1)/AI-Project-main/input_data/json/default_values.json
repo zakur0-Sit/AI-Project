@@ -1,0 +1,8 @@
+[
+  {
+    "classes": ["C401","C403", "C405", "C409", "C411", "C412" , "C413", "C112", "C2", "C308", "C309", "C901", "C903", "C905", "C909", "C210"],
+    "groups": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3", "B4", "E1", "E2", "E3"],
+    "professors": ["Ghirvu Lucian", "Vitcu Anca", "Olariu Florin", "Marculeț Dan", "Gavrilut Dragos", "Simionescu Cristian", "Țiplea Ferucio Laurențiu", "Gratie Diana Elena", "Pistol Ionuț Cristian", "Răschip Mădălina", "Trandabăț Diana", "Lupascu Marilena", "Diac Paul", "Ioniță Alexandru", "Oleniuc Iulian", "Ciortuz Liviu", "Vârlan Cosmin", "Benchea Răzvan", "Ciobâcă Ștefan", "Cornei Laura", "Iftene Adrian", "Coteanu Maria", "Vidrașcu Cristian", "Constantinescu Gabriel", "Melinte Daria", "Vârlan Simona-Elena", "Țicloș Olimpia", "Frentescu Tordai Laura", "Ignat Anca", "Balan Gheorghe", "Zălinescu Adrian", "Dimitriu Corina", "Craciun Vlad", "Onica Emanuel", "Pascariu Laura", "Stoica George", "Ciobanu Sebastian", "Prelipcean Bogdan", "Nica Anca-Maria", "Silion Dragos", "Albert Ramona", "Pantiru Stefan", "Peterca Adrian"],
+    "courses": [["Securitatea informaţiei", 0], ["Practica pedagogică în învățământul preuniversitar obligatoriu I", 2], ["Animatie 3D: algoritmi si tehnici fundamentale", 1], ["Introducere în. Net", 1], ["Rețele neuronale",1], ["Programare în Python", 0], ["Inteligenţă artificială", 0], ["Programare și modelare probabilistă", 1], ["Învățare automată", 0], ["Dezvoltarea sistemelor fizice utilizând microprocesoare", 1], ["Dezvoltare de programe bazată pe verificare", 1], ["Introducere în realitatea mixtă", 1], ["Capitole speciale de sisteme de operare", 1], ["Tehnici de programare multiprocesor", 1], ["Instruire Asistata de Calculator", 2]]
+  }
+]
