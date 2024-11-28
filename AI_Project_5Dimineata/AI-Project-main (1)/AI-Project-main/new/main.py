@@ -26,7 +26,7 @@ def ac3(domain_values, courses_info):
                     queue.append((xk, xi))
         return domains
 
-    def soft_constraints_satisfied(assignment):
+    def soft_constraints_satisfied(assignment, ignore_constraints=[]):
         teacher_daily_classes = {}
 
         for var, time_interval in assignment.items():
@@ -36,32 +36,30 @@ def ac3(domain_values, courses_info):
                 time_interval = TimeInterval(day_of_week, start_time, end_time)
             teacher_name = var[1]
 
-            # Initialize the dictionary for the teacher if not already done
             if teacher_name not in teacher_daily_classes:
                 teacher_daily_classes[teacher_name] = {day: 0 for day in ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]}
 
-            # Increment the count of classes for the teacher on the specific day
             teacher_daily_classes[teacher_name][time_interval.day_of_week] += 1
 
-            for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
-                if isinstance(unavailable_time, str):
-                    day_of_week, times = unavailable_time.split(": ")
-                    start_time, end_time = times.split(" - ")
-                    unavailable_time = TimeInterval(day_of_week, start_time, end_time)
-                if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
-                    return False
-
-            # Check if the number of classes exceeds the daily limit
-            for teacher, day_classes in teacher_daily_classes.items():
-                for day, num_classes in day_classes.items():
-                    if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day), float('inf')):
+            if "unavailable_time" not in ignore_constraints:
+                for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
+                    if isinstance(unavailable_time, str):
+                        day_of_week, times = unavailable_time.split(": ")
+                        start_time, end_time = times.split(" - ")
+                        unavailable_time = TimeInterval(day_of_week, start_time, end_time)
+                    if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
                         return False
+
+            if "daily_num_of_classes" not in ignore_constraints:
+                for teacher, day_classes in teacher_daily_classes.items():
+                    for day, num_classes in day_classes.items():
+                        if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day), float('inf')):
+                            return False
 
         return True
 
     def backtracking_search(variables, domains, arcs):
-        def backtrack(assignment):
-            # print(f"assifnents: {assignment}\n\n")
+        def backtrack(assignment, ignore_constraints):
             if len(assignment) == len(variables):
                 return assignment
 
@@ -78,12 +76,12 @@ def ac3(domain_values, courses_info):
                 if consistent:
                     assignment[var] = value
 
-                    if soft_constraints_satisfied(assignment):
-                        local_domains = {v: list(domains[v]) for v in domains}  # Copy of domains
+                    if soft_constraints_satisfied(assignment, ignore_constraints):
+                        local_domains = {v: list(domains[v]) for v in domains}
                         local_domains[var] = [value]
                         ac3(arcs, local_domains)
 
-                        result = backtrack(assignment)
+                        result = backtrack(assignment, ignore_constraints)
                         if result:
                             return result
 
@@ -91,7 +89,14 @@ def ac3(domain_values, courses_info):
 
             return None
 
-        return backtrack({})
+        constraints = ["unavailable_time", "daily_num_of_classes"]
+        for i in range(len(constraints) + 1):
+            ignore_constraints = constraints[:i]
+            result = backtrack({}, ignore_constraints)
+            if result:
+                return result
+
+        return None
 
     # We start with our arcs at conflicting CTS nodes,
     #       aka courses taught by the same teacher, or courses for a certain group,
