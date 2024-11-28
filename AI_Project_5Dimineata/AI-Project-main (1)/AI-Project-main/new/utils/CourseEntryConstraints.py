@@ -5,22 +5,22 @@ class SoftConstraints:
         self.teacher_for_course = []
         self.teacher_available = []
         self.teacher_unavailable = []
-        self.teacher_daily_num_of_classes = []
+        self.teacher_daily_num_of_classes = {}
         self.optional_course_types = []
         self.course_seminar_order = []
 
     def add_teacher_for_course(self, teacher: Teacher, course: Course, course_type: SubjectType):
         self.teacher_for_course.append((teacher, course, course_type))
 
-    def add_teacher_available(self, teacher: Teacher, time_interval: TimeInterval):
-        if (teacher, time_interval) not in self.teacher_available:
-            self.teacher_available.append((teacher, time_interval))
+    # def add_teacher_available(self, teacher: Teacher, time_interval: TimeInterval):
+    #     if (teacher, time_interval) not in self.teacher_available:
+    #         self.teacher_available.append((teacher, time_interval))
 
     def add_teacher_unavailable(self, teacher: Teacher, time_interval: TimeInterval):
         self.teacher_unavailable.append((teacher, time_interval))
 
-    def add_teacher_daily_num_of_classes(self, teacher: Teacher, day_of_week, num_of_classes: int):
-        self.teacher_daily_num_of_classes.append((teacher, (day_of_week, num_of_classes)))
+    def add_teacher_daily_num_of_classes(self, teacher, day, num_classes):
+        self.teacher_daily_num_of_classes[(teacher.full_name, day)] = num_classes
 
     def add_optional_course_types(self, course: Course, course_types: list[SubjectType]):
         self.optional_course_types.append((course, course_types))

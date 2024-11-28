@@ -4,62 +4,64 @@ from utils.CourseEntryConstraints import TableData
 from collections import deque
 
 def ac3(domain_values, courses_info):
-    # (Class, Teacher, Stud Group) >> CTS tuple
-    # A CTS tuple is actually our node ! per se
-
-    # 2 CTS tuples/nodes are in conflict if they have the same teach or group,
-    #       since 1 group can't have 2 entries at the same time
-    #       ditto for teacher
     def are_in_conflict(var1, var2):
         _, teacher1, group1 = var1
         _, teacher2, group2 = var2
         return teacher1 == teacher2 or group1 == group2
 
-    # Removing inconsistency values from dom[xi],
-    #       if there is no value in dom[xj] that can assure consistency with that value
     def remove_inconsistent_values(xi, xj, domains):
         removed = False
         for x in domains[xi][:]:
-            if all(x == y for y in domains[xj]):
+            if not any(x != y for y in domains[xj]) or not soft_constraints_satisfied({xi: x}):
                 domains[xi].remove(x)
                 removed = True
         return removed
 
-    # The actual ac3 algorithm :
     def ac3(arcs, domains):
         queue = deque(arcs)
         while queue:
             (xi, xj) = queue.popleft()
-
-            # If we removed an inconsistency value from xi, we should update all the arcs which end in xi
             if remove_inconsistent_values(xi, xj, domains):
                 for xk in [arc[0] for arc in arcs if arc[1] == xi]:
                     queue.append((xk, xi))
         return domains
 
     def soft_constraints_satisfied(assignment):
-        # # Check if table_data.constraints.teacher_available is satisfied
-        # for teacher, time_interval in table_data.constraints.teacher_available:
-        #     if (teacher.full_name, time_interval) not in assignment:
-        #         return False
+        teacher_daily_classes = {}
 
-        # Check if table_data.constraints.teacher_unavailable is satisfied
-        for teacher, time_interval in table_data.constraints.teacher_unavailable:
-            if (teacher.full_name, time_interval) in assignment:
-                return False
+        for var, time_interval in assignment.items():
+            if isinstance(time_interval, str):
+                day_of_week, times = time_interval.split(": ")
+                start_time, end_time = times.split(" - ")
+                time_interval = TimeInterval(day_of_week, start_time, end_time)
+            teacher_name = var[1]
 
-        # # Check if table_data.constraints.teacher_daily_num_of_classes is satisfied
-        # for teacher, (day_of_week, num_of_classes) in table_data.constraints.teacher_daily_num_of_classes:
-        #     classes = [course for course in assignment if
-        #     course[1] == teacher.full_name and course[0][0] == day_of_week]
-        #     if len(classes) != num_of_classes:
-        #             return False
+            # Initialize the dictionary for the teacher if not already done
+            if teacher_name not in teacher_daily_classes:
+                teacher_daily_classes[teacher_name] = {day: 0 for day in ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]}
+
+            # Increment the count of classes for the teacher on the specific day
+            teacher_daily_classes[teacher_name][time_interval.day_of_week] += 1
+
+            for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
+                if isinstance(unavailable_time, str):
+                    day_of_week, times = unavailable_time.split(": ")
+                    start_time, end_time = times.split(" - ")
+                    unavailable_time = TimeInterval(day_of_week, start_time, end_time)
+                if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
+                    return False
+
+            # Check if the number of classes exceeds the daily limit
+            for teacher, day_classes in teacher_daily_classes.items():
+                for day, num_classes in day_classes.items():
+                    if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day), float('inf')):
+                        return False
 
         return True
 
-    # Backtracking search for a solution :
     def backtracking_search(variables, domains, arcs):
         def backtrack(assignment):
+            # print(f"assifnents: {assignment}\n\n")
             if len(assignment) == len(variables):
                 return assignment
 
@@ -77,7 +79,6 @@ def ac3(domain_values, courses_info):
                     assignment[var] = value
 
                     if soft_constraints_satisfied(assignment):
-
                         local_domains = {v: list(domains[v]) for v in domains}  # Copy of domains
                         local_domains[var] = [value]
                         ac3(arcs, local_domains)
@@ -96,9 +97,7 @@ def ac3(domain_values, courses_info):
     #       aka courses taught by the same teacher, or courses for a certain group,
     #       as these cannot happen at the same time! ( aka these should have distinct domain_value )
     arcs = [(v1, v2) for v1 in domain_values for v2 in domain_values if v1 != v2 and are_in_conflict(v1, v2)]
-
-    # Applying the AC3 algo, to remove arc inconsistencies
-    domain_values_copy =  {v: list(dom) for v, dom in domain_values.items()}
+    domain_values_copy = {v: list(dom) for v, dom in domain_values.items()}
     reduced_domains = ac3(arcs, domain_values_copy)
     print("Reduced domains after applying AC-3:")
     for var, domain in reduced_domains.items():
@@ -138,12 +137,14 @@ if __name__ == "__main__":
                 # table_data.classrooms.extend([Classroom(cabinet) for cabinet in activity["cabinets"]])
 
                 for group in activity["groups"]:
+                    pass
                     # table_data.student_groups.extend([StudentGroup(group) for group in activity["groups"]])
 
-                    for day, hours in activity["days"].items():
-                        for hour in hours:
-                            start_time, end_time = hour.split('-')
-                            table_data.constraints.add_teacher_available(teacher, TimeInterval(day, start_time, end_time))
+                    # only keeping teacher unavailable
+                    # for day, hours in activity["days"].items():
+                    #     for hour in hours:
+                    #         start_time, end_time = hour.split('-')
+                    #         table_data.constraints.add_teacher_available(teacher, TimeInterval(day, start_time, end_time))
 
         for constraint_day, hours in teacher_data["constraints"]["unavailability"].items():
             for hour in hours:
@@ -156,9 +157,13 @@ if __name__ == "__main__":
 
         # Adaugă constrângerea course_seminar_order pentru profesorii care au această preferință
             if "course_seminar_order" in teacher_data["constraints"]:
-                order = teacher_data["constraints"]["course_seminar_order"]["order"]
-                time_gap = teacher_data["constraints"]["course_seminar_order"]["time_gap"]
-                table_data.constraints.add_course_seminar_order(teacher, order, time_gap)
+                for order_data in teacher_data["constraints"]["course_seminar_order"]:
+                    if isinstance(order_data, dict) and "order" in order_data and "time_gap" in order_data:
+                        order = order_data["order"]
+                        time_gap = order_data["time_gap"]
+                        table_data.constraints.add_course_seminar_order(teacher, order, time_gap)
+                    else:
+                        print(f"Unexpected data format in course_seminar_order: {order_data}")
 
     for values in default_values[0]["classes"]:
         table_data.classrooms.append(Classroom(values))

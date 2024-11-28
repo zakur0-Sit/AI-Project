@@ -81,8 +81,12 @@ class TimeInterval:
         self.start_time = datetime.strptime(start_time, "%H:%M")
         self.end_time = datetime.strptime(end_time, "%H:%M")
 
+
     def __repr__(self):
         return f"{self.day_of_week}: {self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
+
+    def __str__(self):
+        return self.__repr__()
 
     def __eq__(self, other):
         if isinstance(other, TimeInterval):
@@ -90,6 +94,10 @@ class TimeInterval:
                     self.start_time == other.start_time and
                     self.end_time == other.end_time)
         return False
+
+    def overlaps(self, other):
+        return (self.day_of_week == other.day_of_week and
+                not (self.end_time <= other.start_time or self.start_time >= other.end_time))
 
     def __hash__(self):
         return hash((self.day_of_week, self.start_time, self.end_time))
