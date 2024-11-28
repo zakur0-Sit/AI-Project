@@ -1,0 +1,9 @@
+[
+  {
+    "max_hours": 48,
+    "min_hours": 2,
+    "starting_hour": "08:00",
+    "ending_hour": "20:00",
+    "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  }
+]
