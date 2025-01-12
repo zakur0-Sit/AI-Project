@@ -103,19 +103,18 @@ class TimeInterval:
         return hash((self.day_of_week, self.start_time, self.end_time))
 
 class StudentGroup:
-    group_name: str
-
-    def __init__(self, group: str):
-        self.group = group
+    def __init__(self, year: int, group: str):
+        self.year = year
+        self.group_label = group
 
     def __repr__(self):
-        return f"{self.group}"
+        return f"{self.year}{self.group_label}"
 
     def __hash__(self):
-        return hash(self.group)
+        return hash((self.year, self.group_label))
 
     def __eq__(self, other):
-        return self.group == other.group
+        return self.group_label == other.group_label and self.year == other.year
 
 class CourseEntry:
     def __init__(self, day_of_week: str, time_interval: TimeInterval, course: Course,

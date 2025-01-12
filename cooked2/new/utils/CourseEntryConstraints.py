@@ -1,16 +1,16 @@
-from .CourseEntry import TimeInterval, Teacher, SubjectType, Course, StudentGroup, Classroom, CourseEntry
+from utils.CourseEntry import TimeInterval, Teacher, SubjectType, Course, StudentGroup, Classroom, CourseEntry
 
 class SoftConstraints:
     def __init__(self):
-        self.teacher_for_course = []
+        self.teacher_for_course_for_groups = []
         self.teacher_available = []
         self.teacher_unavailable = []
         self.teacher_daily_num_of_classes = {}
         self.optional_course_types = []
         self.course_seminar_order = []
 
-    def add_teacher_for_course(self, teacher: Teacher, course: Course, course_type: SubjectType):
-        self.teacher_for_course.append((teacher, course, course_type))
+    def add_teacher_for_course_for_groups(self, teacher: Teacher, course: Course, course_type: SubjectType, groups: list[StudentGroup]):
+        self.teacher_for_course_for_groups.append((teacher, course, course_type, groups))
 
     # def add_teacher_available(self, teacher: Teacher, time_interval: TimeInterval):
     #     if (teacher, time_interval) not in self.teacher_available:
@@ -30,7 +30,7 @@ class SoftConstraints:
 
     def __repr__(self):
         return (f"SoftConstraints:\n"
-                f"Teachers for courses: {self.teacher_for_course}\n"
+                f"Teachers for courses: {self.teacher_for_course_for_groups}\n"
                 f"Available teachers: {self.teacher_available}\n"
                 f"Unavailable teachers: {self.teacher_unavailable}\n"
                 f"Daily number of classes: {self.teacher_daily_num_of_classes}\n"
