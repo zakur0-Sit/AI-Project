@@ -19,8 +19,8 @@ class SoftConstraints:
     def add_teacher_unavailable(self, teacher: Teacher, time_interval: TimeInterval):
         self.teacher_unavailable.append((teacher, time_interval))
 
-    def add_teacher_daily_num_of_classes(self, teacher, day, num_classes):
-        self.teacher_daily_num_of_classes[(teacher.full_name, day)] = num_classes
+    def add_teacher_daily_num_of_classes(self, teacher, num_classes):
+        self.teacher_daily_num_of_classes[teacher.full_name] = num_classes
 
     def add_optional_course_types(self, course: Course, course_types: list[SubjectType]):
         self.optional_course_types.append((course, course_types))

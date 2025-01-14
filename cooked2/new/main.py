@@ -13,7 +13,7 @@ def build_ignore_soft_constraints(table_data):
     for teacher, _ in table_data.constraints.teacher_unavailable:
         ignore_constraints["unavailable_time"].append(teacher.full_name)
 
-    for teacher_name, _ in table_data.constraints.teacher_daily_num_of_classes.keys():
+    for teacher_name in table_data.constraints.teacher_daily_num_of_classes.keys():
         ignore_constraints["daily_num_of_classes"].append(teacher_name)
 
     for teacher, order, time_gap_hours in table_data.constraints.course_seminary_order:
@@ -130,7 +130,7 @@ def ac3(domain_values):
 
                 # other soft constraints that can only be imposed at backtracking, cuz they're not arc like
                 available_teachers_with_daily_maximum_hours = []
-                for teacher, _ in table_data.constraints.teacher_daily_num_of_classes.keys():
+                for teacher in table_data.constraints.teacher_daily_num_of_classes.keys():
                     if "daily_num_of_classes" not in ignore_constraints or \
                             teacher not in ignore_constraints.get("daily_num_of_classes", []):
                         available_teachers_with_daily_maximum_hours.append(teacher)
@@ -150,7 +150,7 @@ def ac3(domain_values):
 
                 for teacher, day_classes in teacher_hours_per_day.items():
                     for day, num_classes in day_classes.items():
-                        if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day), float('inf')):
+                        if num_classes > table_data.constraints.teacher_daily_num_of_classes.get(teacher, float('inf')):
                             return False
 
         return True
@@ -337,14 +337,14 @@ if __name__ == "__main__":
                 table_data.constraints.add_teacher_for_course_for_groups(teacher, subject["name"], activity["type"], activity["groups"])
 
 
-        for constraint_day, hours in teacher_data["constraints"]["unavailability"].items():
-            for hour in hours:
-                start_time, end_time = hour.split('-')
-                time_interval = TimeInterval(constraint_day, start_time, end_time)
-                table_data.constraints.add_teacher_unavailable(teacher, f"{time_interval}")
+        if "constraints" in teacher_data:
+            if "unavailability" in teacher_data["constraints"]:
+                for constraint_day, hours in teacher_data["constraints"]["unavailability"].items():
+                    for hour in hours:
+                        start_time, end_time = hour.split('-')
+                        time_interval = TimeInterval(constraint_day, start_time, end_time)
+                        table_data.constraints.add_teacher_unavailable(teacher, f"{time_interval}")
 
-                daily_num_classes = len(hours)
-                table_data.constraints.add_teacher_daily_num_of_classes(teacher, constraint_day.upper(), daily_num_classes)
 
             if "course_seminary_order" in teacher_data["constraints"]:
                 order_data = teacher_data["constraints"]["course_seminary_order"]
@@ -354,6 +354,14 @@ if __name__ == "__main__":
                     table_data.constraints.add_course_seminar_order(teacher, which_is_first, time_gap_hours)
                 else:
                     print(f"Unexpected data format in course_seminar_order: {order_data}")
+
+            if "max_hours" in teacher_data["constraints"]:
+                daily_max_hours = teacher_data["constraints"]["max_hours"]
+                if daily_max_hours < 2:
+                    print(f"Invalid number of maximum daily hours for teacher {teacher.full_name}: {daily_max_hours}.")
+                    print(" \n This constraint will be skipped.")
+
+                table_data.constraints.add_teacher_daily_num_of_classes(teacher, daily_max_hours)
 
     for values in default_values[0]["classes"]:
         table_data.classrooms.append(Classroom(values))

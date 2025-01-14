@@ -86,7 +86,7 @@
     "constraints":
     {
       "min_hours": 10,
-      "max_hours": 20,
+      "max_hours": 2,
       "unavailability":
       {
         "Wednesday": ["08:00-12:00"]
