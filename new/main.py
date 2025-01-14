@@ -23,6 +23,12 @@ def build_ignore_soft_constraints(table_data):
 
 
 def ac3(domain_values):
+    # groups are in conflict if any students overlap:
+    # as in: 3A and any other group included in 3A: 3A, 3A2; or 3A-3B and 3A4 or 3B2
+    # ofc, 2A will not conflict with 3A
+    # 3A and 3A-3B are the notations used for course type classes, to indicate the semi years to be present
+    # use these notations in the teachers file, if not it will not properly recognize the groups: year followed by semi year letter and optionally the group number
+    # if more groups/semi years are to be at that course at once, unite them with just a dash, no spacing: 2A-2E
     def are_groups_in_conflict(group1, group2):
         year1, year2 = group1[0], group2[0]
         if year1 != year2:
@@ -40,12 +46,14 @@ def ac3(domain_values):
 
         return any(semi_year in semi_year2 for semi_year in semi_year1)
 
+    # checks if two variables are in conflict
     def are_in_conflict(var1, var2):
         _, teacher1, group1, _ = var1
         _, teacher2, group2, _ = var2
         # check if no numbers are in group1
         return teacher1 == teacher2 or are_groups_in_conflict(group1, group2)
 
+    # ac3 removal of inconsistent values, given the 2 attributes - that make an arc that is to be checked - and the domains
     def remove_inconsistent_values(xi, xj, domains, ignore_constraints):
         removed = False
         for x in domains[xi][:]:
@@ -54,6 +62,7 @@ def ac3(domain_values):
                 removed = True
         return removed
 
+    # ac3 algorithm
     def ac3_internal(arcs, domains, ignore_constraints):
         queue = deque(arcs)
         while queue:
@@ -65,48 +74,36 @@ def ac3(domain_values):
                     queue.append((xk, xi))
         return domains
 
-
+    # checks if the arc and arc-like constraints are satisfied, between an exact value of xi and the domain of xj
     def arc_constraints_satisfied(xi, i_value, xj, domains, ignore_constraints={}):
         _, i_teacher, i_group, i_type = xi
         _, j_teacher, j_group, j_type = xj
 
         found_any_j_value = False
         for j_value in domains[xj]:
+            # I call this method on backtracking, where xj only has one value, so for that case I don't need to iterate
             if not isinstance(domains[xj], list):
                 j_value = domains[xj]
 
             ok_value = True
             i_time_interval, j_time_interval = i_value[0], j_value[0]
+            # if the values are exactly the same (time_interval and classroom) or the variables have the same teach and time interval (which is imposible, a teach cannot be in 2 places at once), we skip
             if i_value == j_value or i_teacher == j_teacher and i_time_interval == j_time_interval:
                 ok_value = False
                 continue
 
             # course_seminary_order arc constraint
+            # fetching all teachers that have this constraint
             teacher_with_course_seminary_order = [teach.full_name for teach, _, _ in table_data.constraints.course_seminary_order]
-            a = "course_seminary_order" not in ignore_constraints.keys()
-            b = 0
-            if not a:
-              b = i_teacher not in ignore_constraints["course_seminary_order"]
-            c = i_teacher in teacher_with_course_seminary_order
-            d = i_teacher == j_teacher
-            e = i_type != j_type
+            # if the teachers isnt listed as to be ignored for this constraint and the course types are different - since its course - seminary order -
+            # and the groups are in conflict, - cuz I want x amount of time between course and seminary at the group level - then we check if the constraint is satisfied
             if ("course_seminary_order" not in ignore_constraints.keys() or
                     i_teacher not in ignore_constraints["course_seminary_order"]) and i_teacher in teacher_with_course_seminary_order and \
                     i_teacher == j_teacher and i_type != j_type and are_groups_in_conflict(i_group, j_group):
                 which_is_first, time_gap_hours = [(order, time_gap_hours) \
                                                   for teach, order, time_gap_hours in table_data.constraints.course_seminary_order if teach.full_name == i_teacher][0]
 
-
-                i_time_interval, j_time_interval = 0, 0
-                # try:
                 i_time_interval, j_time_interval = i_value[0], j_value[0]
-                # except:
-                #     print("i_value: " + str(i_value))
-                #     print("j_value: " + str(j_value))
-                #     print("xi:" + str(xi))
-                #     print("xj:" + str(xj))
-
-
                 i_day_of_week_id, j_day_of_week_id = list(WEEK_DAYS).index(i_time_interval.day_of_week), list(WEEK_DAYS).index(j_time_interval.day_of_week)
 
                 i_minus_j_time_gap = abs((i_day_of_week_id * 24 + i_value[0].start_time.hour) - (j_day_of_week_id * 24 + j_value[0].start_time.hour))
@@ -129,6 +126,7 @@ def ac3(domain_values):
         else:
             return True
 
+    # checking if the constraints and soft constraints are satisfied at backtracking time
     def backtracking_soft_constraints_satisfied(assignment, ignore_constraints={}):
         # spacing :P
 
@@ -164,93 +162,6 @@ def ac3(domain_values):
                             return False
 
         return True
-
-    # def soft_constraints_satisfied(assignment, ignore_constraints={}):
-    #     teacher_daily_classes = {}
-    #     courses_data = {}
-    #
-    #     for var in assignment.keys():
-    #         time_interval, _ = assignment[var]
-    #         if isinstance(time_interval, str):
-    #             day_of_week, times = time_interval.split(": ")
-    #             start_time, end_time = times.split(" - ")
-    #             time_interval = TimeInterval(day_of_week, start_time, end_time)
-    #         teacher_name = var[1]
-    #         course_name = var[0]
-    #         course_type = var[3]
-    #
-    #         if teacher_name not in teacher_daily_classes:
-    #             teacher_daily_classes[teacher_name] = {day: 0 for day in
-    #                                                    ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY",
-    #                                                     "SATURDAY"]}
-    #
-    #         teacher_daily_classes[teacher_name][time_interval.day_of_week] += 1
-    #
-    #         if teacher_name not in ignore_constraints.get("unavailable_time", []):
-    #             for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
-    #                 if isinstance(unavailable_time, str):
-    #                     day_of_week, times = unavailable_time.split(": ")
-    #                     start_time, end_time = times.split(" - ")
-    #                     unavailable_time = TimeInterval(day_of_week, start_time, end_time)
-    #                 if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
-    #                     return False
-    #
-    #         if teacher_name not in ignore_constraints.get("daily_num_of_classes", []):
-    #             for teacher, day_classes in teacher_daily_classes.items():
-    #                 for day, num_classes in day_classes.items():
-    #                     if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day),
-    #                                                                                              float('inf')):
-    #                         return False
-    #
-    #         if teacher_name not in ignore_constraints.get("course_seminary_order", []):
-    #             if course_name not in courses_data:
-    #                 courses_data[course_name] = []
-    #
-    #             courses_data[course_name].append((time_interval, course_type))
-    #
-    #     print("\n\n table data and course data")
-    #     print(table_data.constraints.course_seminary_order)
-    #     print(courses_data)
-    #     print("\n\n")
-    #     for teacher, order, time_gap_hours in table_data.constraints.course_seminary_order:
-    #         print("\n\n entry in course_seminary_order")
-    #         print(teacher.full_name + " " + order + " " + str(time_gap_hours))
-    #         print("ignore constains: " + str(ignore_constraints))
-    #         if teacher.full_name in ignore_constraints.get("course_seminary_order", []):
-    #             continue
-    #
-    #         print("aici")
-    #
-    #         for course_name, courses_list in courses_data.items():
-    #             for i in range(len(courses_list) - 1):
-    #                 current_time_interval, current_course_type = courses_list[i]
-    #                 next_time_interval, next_course_type = courses_list[i + 1]
-    #                 print("\n\n course data entries")
-    #                 print(course_name)
-    #                 print(current_time_interval)
-    #                 print(current_course_type)
-    #                 print(next_time_interval)
-    #                 print(next_course_type)
-    #                 print(order)
-    #                 print(time_gap_hours)
-    #                 print("\n\n")
-    #
-    #                 current_day_of_week_id = list(WEEK_DAYS).index(current_time_interval.day_of_week)
-    #                 next_day_of_week_id = list(WEEK_DAYS).index(next_time_interval.day_of_week)
-    #
-    #                 current_time = current_day_of_week_id * 24 + current_time_interval.start_time.hour
-    #                 next_time = next_day_of_week_id * 24 + next_time_interval.start_time.hour
-    #
-    #                 if current_course_type == "seminary" and next_course_type == "course" and order == "seminary":
-    #                     if next_time - current_time < time_gap_hours:
-    #                         return False
-    #                 elif current_course_type == "course" and next_course_type == "seminary" and order == "course":
-    #                     if next_time - current_time < time_gap_hours:
-    #                         return False
-    #                 else:
-    #                     return False
-    #
-    #     return True
 
     def backtracking_search(variables, domains, arcs, ignore_constraints):
         def backtrack(assignment):
@@ -312,17 +223,17 @@ def ac3(domain_values):
         arcs = [(v1, v2) for v1 in domain_values for v2 in domain_values if v1 != v2 and are_in_conflict(v1, v2)]
         domain_values_copy = {v: list(dom) for v, dom in domain_values.items()}
         reduced_domains = ac3_internal(arcs, domain_values_copy, ignore_constraints)
-        tries += 1
-        with open("./output_data/logs2.txt", "w") as f:
-            f.write(f" tries: {tries} \n\n")
+        # tries += 1
+        # with open("./output_data/logs2.txt", "w") as f:
+        #     f.write(f" tries: {tries} \n\n")
         if all(reduced_domains.values()):
             # this print gets long ...
             # print("Reduced domains after applying AC-3:")
             # for var, domain in reduced_domains.items():
             #     print(f"{var}: {domain}")
-            with open("./output_data/logs2.txt", "a") as f:
-                f.write("in backtracking search\n")
-            pass
+            # with open("./output_data/logs2.txt", "a") as f:
+            #     f.write("in backtracking search\n")
+            # pass
             solution = backtracking_search(domain_values, reduced_domains, arcs, ignore_constraints)
             if solution:
                 return solution
@@ -333,9 +244,8 @@ def ac3(domain_values):
 
 if __name__ == "__main__":
 
-    # Open a file to write the output
+    # moving all debug prints to a file, so I can scroll through everything - the terminal won't go back by a lot
     output_file = open('./output_data/logs.txt', 'w')
-    # Redirect stdout to the file
     sys.stdout = io.TextIOWrapper(output_file.buffer, encoding='utf-8')
 
 
@@ -417,7 +327,7 @@ if __name__ == "__main__":
     time_intervals = []
     for day in working_days:
         for hour in range(start_hour, end_hour, 2):
-            if start_hour % 2 == 1: # presupun ca avem doar ore de 2 ore, la ore pare ; TODO
+            if start_hour % 2 == 1: # presupun ca avem doar ore de 2 ore, la ore pare
                 continue
 
             start_time = f"{hour:02d}:00"
@@ -443,7 +353,6 @@ if __name__ == "__main__":
             variable = (course_name, teacher.full_name, group, course_type)
             domain_values[variable] = [(time_i, classroom) for time_i, classroom in time_x_classroom_domain_values]
 
-            # courses_info[course.name].append((teacher.full_name, group, classroom.cabinet))
 
     print("\nDomain values:")
     for var, domain in domain_values.items():
