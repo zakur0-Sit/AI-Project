@@ -23,21 +23,28 @@ def build_ignore_soft_constraints(table_data):
 
 
 def ac3(domain_values):
-    def are_in_conflict(var1, var2):
-        _, teacher1, group1, _ = var1
-        _, teacher2, group2, _ = var2
-        # check if no numbers are in group1
-        if any(char.isdigit() for char in group1) and any(char.isdigit() for char in group2):
-            return teacher1 == teacher2 or group1 == group2
+    def are_groups_in_conflict(group1, group2):
+        year1, year2 = group1[0], group2[0]
+        if year1 != year2:
+            return False
+
+        if '-' not in group1 and '-' not in group2 and group1.__len__() == 3 and group2.__len__() == 3:
+            return group1 == group2
 
         semi_year1, semi_year2 = [], []
         for semi_year in ["A", "B", "E"]:
             if semi_year in group1:
                 semi_year1.append(semi_year)
             if semi_year in group2:
-                semi_year2.append(semi_year)
+               semi_year2.append(semi_year)
 
-        return teacher1 == teacher2 or any(semi_year in semi_year2 for semi_year in semi_year1)
+        return any(semi_year in semi_year2 for semi_year in semi_year1)
+
+    def are_in_conflict(var1, var2):
+        _, teacher1, group1, _ = var1
+        _, teacher2, group2, _ = var2
+        # check if no numbers are in group1
+        return teacher1 == teacher2 or are_groups_in_conflict(group1, group2)
 
     def remove_inconsistent_values(xi, xj, domains, ignore_constraints):
         removed = False
@@ -51,6 +58,8 @@ def ac3(domain_values):
         queue = deque(arcs)
         while queue:
             (xi, xj) = queue.popleft()
+            remaining_domain_value_count = sum([len(domains[xi]) for xi in domains.keys()])
+            print("domains left" + str(remaining_domain_value_count) + "\n\n")
             if remove_inconsistent_values(xi, xj, domains, ignore_constraints):
                 for xk in [arc[0] for arc in arcs if arc[1] == xi]:
                     queue.append((xk, xi))
@@ -58,8 +67,8 @@ def ac3(domain_values):
 
 
     def arc_constraints_satisfied(xi, i_value, xj, domains, ignore_constraints={}):
-        _, i_teacher, _, i_type = xi
-        _, j_teacher, _, j_type = xj
+        _, i_teacher, i_group, i_type = xi
+        _, j_teacher, j_group, j_type = xj
 
         found_any_j_value = False
         for j_value in domains[xj]:
@@ -67,7 +76,8 @@ def ac3(domain_values):
                 j_value = domains[xj]
 
             ok_value = True
-            if i_value == j_value:
+            i_time_interval, j_time_interval = i_value[0], j_value[0]
+            if i_value == j_value or i_teacher == j_teacher and i_time_interval == j_time_interval:
                 ok_value = False
                 continue
 
@@ -82,7 +92,7 @@ def ac3(domain_values):
             e = i_type != j_type
             if ("course_seminary_order" not in ignore_constraints.keys() or
                     i_teacher not in ignore_constraints["course_seminary_order"]) and i_teacher in teacher_with_course_seminary_order and \
-                    i_teacher == j_teacher and i_type != j_type:
+                    i_teacher == j_teacher and i_type != j_type and are_groups_in_conflict(i_group, j_group):
                 which_is_first, time_gap_hours = [(order, time_gap_hours) \
                                                   for teach, order, time_gap_hours in table_data.constraints.course_seminary_order if teach.full_name == i_teacher][0]
 
@@ -247,10 +257,13 @@ def ac3(domain_values):
             if len(assignment) == len(variables):
                 return assignment
 
+
             unassigned = [v for v in variables if v not in assignment]
             var = unassigned[0]
 
             for value in domains[var]:
+                print("assignment  size" + str(len(assignment)) + "\n\n")
+
                 consistent = True
                 for other_var, other_val in assignment.items():
                     if are_in_conflict(var, other_var) and value == other_val:
@@ -277,6 +290,7 @@ def ac3(domain_values):
 
     soft_constraints = build_ignore_soft_constraints(table_data)
     soft_constrains_amount = sum([len(constrained_items) for constrained_items in soft_constraints.values()])
+    tries = 0
     for i in range(soft_constrains_amount + 1):
         # we first try to make a solution without ignoring constraints, then just one, and so on
         # we'll decrease from the number of constraints to ignore till 0
@@ -298,10 +312,17 @@ def ac3(domain_values):
         arcs = [(v1, v2) for v1 in domain_values for v2 in domain_values if v1 != v2 and are_in_conflict(v1, v2)]
         domain_values_copy = {v: list(dom) for v, dom in domain_values.items()}
         reduced_domains = ac3_internal(arcs, domain_values_copy, ignore_constraints)
+        tries += 1
+        with open("./output_data/logs2.txt", "w") as f:
+            f.write(f" tries: {tries} \n\n")
         if all(reduced_domains.values()):
-            print("Reduced domains after applying AC-3:")
-            for var, domain in reduced_domains.items():
-                print(f"{var}: {domain}")
+            # this print gets long ...
+            # print("Reduced domains after applying AC-3:")
+            # for var, domain in reduced_domains.items():
+            #     print(f"{var}: {domain}")
+            with open("./output_data/logs2.txt", "a") as f:
+                f.write("in backtracking search\n")
+            pass
             solution = backtracking_search(domain_values, reduced_domains, arcs, ignore_constraints)
             if solution:
                 return solution
@@ -406,19 +427,27 @@ if __name__ == "__main__":
 
     print("table data" + str(table_data))
 
-    for course in table_data.courses:
-        course_name = course.name
-        # if course_name not in courses_info:
-            # courses_info[course_name] = []
+    time_x_classroom_domain_values = []
+    print("Classrooms added:")
+    for classroom in table_data.classrooms.copy():
+        if classroom.cabinet[3] > '3': # this has a decent time
+            continue
 
-        for teacher, course_name, course_type, group_list in table_data.constraints.teacher_for_course_for_groups:
-            for group in group_list:
-                for classroom in table_data.classrooms:
-                    variable = (course_name, teacher.full_name, group, course_type)
-                    domain_values[variable] = [(time_i, classroom) for time_i in time_intervals.copy()]
+        print(classroom.cabinet)
+        print(", ")
+        for time_i in time_intervals.copy():
+            time_x_classroom_domain_values.append((time_i, classroom.cabinet))
 
-                    # courses_info[course.name].append((teacher.full_name, group, classroom.cabinet))
+    for teacher, course_name, course_type, group_list in table_data.constraints.teacher_for_course_for_groups:
+        for group in group_list:
+            variable = (course_name, teacher.full_name, group, course_type)
+            domain_values[variable] = [(time_i, classroom) for time_i, classroom in time_x_classroom_domain_values]
 
+            # courses_info[course.name].append((teacher.full_name, group, classroom.cabinet))
+
+    print("\nDomain values:")
+    for var, domain in domain_values.items():
+        print(f"{var}: {domain}")
     solution = ac3(domain_values)
     sol_str = ""
     print("\nSolution found:")
