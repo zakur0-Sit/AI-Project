@@ -1,12 +1,14 @@
+import io
 import json
 import os
+import sys
 
-from utils.CourseEntry import Classroom, Course, TimeInterval, Teacher, StudentGroup
+from utils.CourseEntry import Classroom, Course, TimeInterval, Teacher, StudentGroup, WEEK_DAYS
 from utils.CourseEntryConstraints import TableData
 from collections import deque
 
 def build_ignore_soft_constraints(table_data):
-    ignore_constraints = {"unavailable_time" : [], "daily_num_of_classes" : [], "courses_after_labs" : []}
+    ignore_constraints = {"unavailable_time" : [], "daily_num_of_classes" : [], "course_seminary_order" : []}
 
     for teacher, _ in table_data.constraints.teacher_unavailable:
         ignore_constraints["unavailable_time"].append(teacher.full_name)
@@ -14,8 +16,8 @@ def build_ignore_soft_constraints(table_data):
     for teacher_name, _ in table_data.constraints.teacher_daily_num_of_classes.keys():
         ignore_constraints["daily_num_of_classes"].append(teacher_name)
 
-    # for teacher, order, time_gap in table_data.constraints.course_seminar_order:
-    #     ignore_constraints["courses_after_labs"].append(course.name)
+    for teacher, order, time_gap_hours in table_data.constraints.course_seminary_order:
+        ignore_constraints["course_seminary_order"].append(teacher.full_name)
 
     return ignore_constraints
 
@@ -40,7 +42,7 @@ def ac3(domain_values):
     def remove_inconsistent_values(xi, xj, domains, ignore_constraints):
         removed = False
         for x in domains[xi][:]:
-            if not any(x != y for y in domains[xj]) or not soft_constraints_satisfied({xi: x}, ignore_constraints):
+            if not arc_constraints_satisfied(xi, x, xj, domains, ignore_constraints):
                 domains[xi].remove(x)
                 removed = True
         return removed
@@ -54,46 +56,191 @@ def ac3(domain_values):
                     queue.append((xk, xi))
         return domains
 
-    def soft_constraints_satisfied(assignment, ignore_constraints={}):
-        teacher_daily_classes = {}
-        courses_data = {}
 
-        for var in assignment.keys():
-            time_interval, _ = assignment[var]
-            if isinstance(time_interval, str):
-                day_of_week, times = time_interval.split(": ")
-                start_time, end_time = times.split(" - ")
-                time_interval = TimeInterval(day_of_week, start_time, end_time)
-            teacher_name = var[1]
-            course_name = var[0]
+    def arc_constraints_satisfied(xi, i_value, xj, domains, ignore_constraints={}):
+        _, i_teacher, _, i_type = xi
+        _, j_teacher, _, j_type = xj
 
-            if teacher_name not in teacher_daily_classes:
-                teacher_daily_classes[teacher_name] = {day: 0 for day in ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]}
+        found_any_j_value = False
+        for j_value in domains[xj]:
+            if not isinstance(domains[xj], list):
+                j_value = domains[xj]
 
-            teacher_daily_classes[teacher_name][time_interval.day_of_week] += 1
+            ok_value = True
+            if i_value == j_value:
+                ok_value = False
+                continue
 
-            if teacher_name not in ignore_constraints.get("unavailable_time", []):
-                for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
-                    if isinstance(unavailable_time, str):
-                        day_of_week, times = unavailable_time.split(": ")
-                        start_time, end_time = times.split(" - ")
-                        unavailable_time = TimeInterval(day_of_week, start_time, end_time)
-                    if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
-                        return False
+            # course_seminary_order arc constraint
+            teacher_with_course_seminary_order = [teach.full_name for teach, _, _ in table_data.constraints.course_seminary_order]
+            a = "course_seminary_order" not in ignore_constraints.keys()
+            b = 0
+            if not a:
+              b = i_teacher not in ignore_constraints["course_seminary_order"]
+            c = i_teacher in teacher_with_course_seminary_order
+            d = i_teacher == j_teacher
+            e = i_type != j_type
+            if ("course_seminary_order" not in ignore_constraints.keys() or
+                    i_teacher not in ignore_constraints["course_seminary_order"]) and i_teacher in teacher_with_course_seminary_order and \
+                    i_teacher == j_teacher and i_type != j_type:
+                which_is_first, time_gap_hours = [(order, time_gap_hours) \
+                                                  for teach, order, time_gap_hours in table_data.constraints.course_seminary_order if teach.full_name == i_teacher][0]
 
-            if teacher_name not in ignore_constraints.get("daily_num_of_classes", []):
-                for teacher, day_classes in teacher_daily_classes.items():
+
+                i_time_interval, j_time_interval = 0, 0
+                # try:
+                i_time_interval, j_time_interval = i_value[0], j_value[0]
+                # except:
+                #     print("i_value: " + str(i_value))
+                #     print("j_value: " + str(j_value))
+                #     print("xi:" + str(xi))
+                #     print("xj:" + str(xj))
+
+
+                i_day_of_week_id, j_day_of_week_id = list(WEEK_DAYS).index(i_time_interval.day_of_week), list(WEEK_DAYS).index(j_time_interval.day_of_week)
+
+                i_minus_j_time_gap = abs((i_day_of_week_id * 24 + i_value[0].start_time.hour) - (j_day_of_week_id * 24 + j_value[0].start_time.hour))
+                if i_time_interval < j_time_interval and i_type == which_is_first and i_minus_j_time_gap >= time_gap_hours:
+                        # ok_value = True
+                        pass # idk how to write these ifs so I wrote them like so
+                elif j_time_interval < i_time_interval and j_type == which_is_first and i_minus_j_time_gap >= time_gap_hours:
+                        # ok_value = True
+                        pass # idk how to write these ifs so I wrote them like so
+                else:
+                    ok_value = False
+                    continue
+
+            if ok_value: # found one j value for which the constraint is satisfied
+                found_any_j_value = True
+                break
+
+        if not found_any_j_value:
+            return False
+        else:
+            return True
+
+    def backtracking_soft_constraints_satisfied(assignment, ignore_constraints={}):
+        # spacing :P
+
+        for xi in assignment.keys():
+            for xj in assignment.keys():
+                pass
+                if xi != xj and not arc_constraints_satisfied(xi, assignment[xi], xj, assignment, ignore_constraints):
+                    return False
+
+                # other soft constraints that can only be imposed at backtracking, cuz they're not arc like
+                available_teachers_with_daily_maximum_hours = []
+                for teacher, _ in table_data.constraints.teacher_daily_num_of_classes.keys():
+                    if "daily_num_of_classes" not in ignore_constraints or \
+                            teacher not in ignore_constraints.get("daily_num_of_classes", []):
+                        available_teachers_with_daily_maximum_hours.append(teacher)
+
+                teacher_hours_per_day = {}
+                for var in assignment.keys():
+                    time_interval, _ = assignment[var]
+                    teacher_name = var[1]
+                    if teacher_name not in available_teachers_with_daily_maximum_hours:
+                        continue
+
+                    if teacher_name not in teacher_hours_per_day:
+                        teacher_hours_per_day[teacher_name] = {day: 0 for day in
+                                                               ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY",
+                                                                "SATURDAY"]}
+                    teacher_hours_per_day[teacher_name][time_interval.day_of_week] += time_interval.time_span() # num of hours
+
+                for teacher, day_classes in teacher_hours_per_day.items():
                     for day, num_classes in day_classes.items():
                         if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day), float('inf')):
                             return False
-            #
-            # if course_name not in ignore_constraints.get("courses_after_labs", []):
-            #     if course_name not in courses_data:
-            #         courses_data[course_name] = []
-            #
-            #     courses_data[course_name].append(time_interval, type)
 
         return True
+
+    # def soft_constraints_satisfied(assignment, ignore_constraints={}):
+    #     teacher_daily_classes = {}
+    #     courses_data = {}
+    #
+    #     for var in assignment.keys():
+    #         time_interval, _ = assignment[var]
+    #         if isinstance(time_interval, str):
+    #             day_of_week, times = time_interval.split(": ")
+    #             start_time, end_time = times.split(" - ")
+    #             time_interval = TimeInterval(day_of_week, start_time, end_time)
+    #         teacher_name = var[1]
+    #         course_name = var[0]
+    #         course_type = var[3]
+    #
+    #         if teacher_name not in teacher_daily_classes:
+    #             teacher_daily_classes[teacher_name] = {day: 0 for day in
+    #                                                    ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY",
+    #                                                     "SATURDAY"]}
+    #
+    #         teacher_daily_classes[teacher_name][time_interval.day_of_week] += 1
+    #
+    #         if teacher_name not in ignore_constraints.get("unavailable_time", []):
+    #             for teacher, unavailable_time in table_data.constraints.teacher_unavailable:
+    #                 if isinstance(unavailable_time, str):
+    #                     day_of_week, times = unavailable_time.split(": ")
+    #                     start_time, end_time = times.split(" - ")
+    #                     unavailable_time = TimeInterval(day_of_week, start_time, end_time)
+    #                 if teacher.full_name == teacher_name and time_interval.overlaps(unavailable_time):
+    #                     return False
+    #
+    #         if teacher_name not in ignore_constraints.get("daily_num_of_classes", []):
+    #             for teacher, day_classes in teacher_daily_classes.items():
+    #                 for day, num_classes in day_classes.items():
+    #                     if num_classes > table_data.constraints.teacher_daily_num_of_classes.get((teacher, day),
+    #                                                                                              float('inf')):
+    #                         return False
+    #
+    #         if teacher_name not in ignore_constraints.get("course_seminary_order", []):
+    #             if course_name not in courses_data:
+    #                 courses_data[course_name] = []
+    #
+    #             courses_data[course_name].append((time_interval, course_type))
+    #
+    #     print("\n\n table data and course data")
+    #     print(table_data.constraints.course_seminary_order)
+    #     print(courses_data)
+    #     print("\n\n")
+    #     for teacher, order, time_gap_hours in table_data.constraints.course_seminary_order:
+    #         print("\n\n entry in course_seminary_order")
+    #         print(teacher.full_name + " " + order + " " + str(time_gap_hours))
+    #         print("ignore constains: " + str(ignore_constraints))
+    #         if teacher.full_name in ignore_constraints.get("course_seminary_order", []):
+    #             continue
+    #
+    #         print("aici")
+    #
+    #         for course_name, courses_list in courses_data.items():
+    #             for i in range(len(courses_list) - 1):
+    #                 current_time_interval, current_course_type = courses_list[i]
+    #                 next_time_interval, next_course_type = courses_list[i + 1]
+    #                 print("\n\n course data entries")
+    #                 print(course_name)
+    #                 print(current_time_interval)
+    #                 print(current_course_type)
+    #                 print(next_time_interval)
+    #                 print(next_course_type)
+    #                 print(order)
+    #                 print(time_gap_hours)
+    #                 print("\n\n")
+    #
+    #                 current_day_of_week_id = list(WEEK_DAYS).index(current_time_interval.day_of_week)
+    #                 next_day_of_week_id = list(WEEK_DAYS).index(next_time_interval.day_of_week)
+    #
+    #                 current_time = current_day_of_week_id * 24 + current_time_interval.start_time.hour
+    #                 next_time = next_day_of_week_id * 24 + next_time_interval.start_time.hour
+    #
+    #                 if current_course_type == "seminary" and next_course_type == "course" and order == "seminary":
+    #                     if next_time - current_time < time_gap_hours:
+    #                         return False
+    #                 elif current_course_type == "course" and next_course_type == "seminary" and order == "course":
+    #                     if next_time - current_time < time_gap_hours:
+    #                         return False
+    #                 else:
+    #                     return False
+    #
+    #     return True
 
     def backtracking_search(variables, domains, arcs, ignore_constraints):
         def backtrack(assignment):
@@ -113,7 +260,7 @@ def ac3(domain_values):
                 if consistent:
                     assignment[var] = value
 
-                    if soft_constraints_satisfied(assignment, ignore_constraints):
+                    if backtracking_soft_constraints_satisfied(assignment, ignore_constraints):
                         local_domains = {v: list(domains[v]) for v in domains}
                         local_domains[var] = [value]
                         ac3_internal(arcs, local_domains, ignore_constraints)
@@ -128,23 +275,25 @@ def ac3(domain_values):
 
         return backtrack({})
 
-    constraints = build_ignore_soft_constraints(table_data)
-    soft_constrains_amount = sum([len(constrained_items) for constrained_items in constraints.values()])
+    soft_constraints = build_ignore_soft_constraints(table_data)
+    soft_constrains_amount = sum([len(constrained_items) for constrained_items in soft_constraints.values()])
     for i in range(soft_constrains_amount + 1):
+        # we first try to make a solution without ignoring constraints, then just one, and so on
+        # we'll decrease from the number of constraints to ignore till 0
         ignore_constraints = {}
-        for constrain_type in constraints.keys():
-            if i >= soft_constrains_amount:
+        num_of_constraints_to_ignore = i
+        for constrain_type in soft_constraints.keys():
+            if num_of_constraints_to_ignore == 0:
                 break
 
-            for constrained_items in constraints[constrain_type]:
-                if i < soft_constrains_amount:
-                    if constrain_type not in ignore_constraints:
-                        ignore_constraints[constrain_type] = []
-
-                    ignore_constraints[constrain_type].append(constrained_items)
-                    i += 1
-                else:
+            for constrained_items in soft_constraints[constrain_type]:
+                if num_of_constraints_to_ignore == 0:
                     break
+
+                if constrain_type not in ignore_constraints:
+                    ignore_constraints[constrain_type] = []
+                ignore_constraints[constrain_type].append(constrained_items)
+                num_of_constraints_to_ignore -= 1
 
         arcs = [(v1, v2) for v1 in domain_values for v2 in domain_values if v1 != v2 and are_in_conflict(v1, v2)]
         domain_values_copy = {v: list(dom) for v, dom in domain_values.items()}
@@ -162,6 +311,13 @@ def ac3(domain_values):
 
 
 if __name__ == "__main__":
+
+    # Open a file to write the output
+    output_file = open('./output_data/logs.txt', 'w')
+    # Redirect stdout to the file
+    sys.stdout = io.TextIOWrapper(output_file.buffer, encoding='utf-8')
+
+
     table_data = TableData()
 
     with open("./utils/teachers.json", encoding='utf-8') as f:
@@ -190,14 +346,14 @@ if __name__ == "__main__":
                 daily_num_classes = len(hours)
                 table_data.constraints.add_teacher_daily_num_of_classes(teacher, constraint_day.upper(), daily_num_classes)
 
-            if "course_seminar_order" in teacher_data["constraints"]:
-                for order_data in teacher_data["constraints"]["course_seminar_order"]: # ???
-                    if isinstance(order_data, dict) and "order" in order_data and "time_gap" in order_data:
-                        order = order_data["order"]
-                        time_gap = order_data["time_gap"]
-                        table_data.constraints.add_course_seminar_order(teacher, order, time_gap)
-                    else:
-                        print(f"Unexpected data format in course_seminar_order: {order_data}")
+            if "course_seminary_order" in teacher_data["constraints"]:
+                order_data = teacher_data["constraints"]["course_seminary_order"]
+                if isinstance(order_data, dict) and "first" in order_data and "time_gap_hours" in order_data:
+                    which_is_first = order_data["first"]
+                    time_gap_hours = order_data["time_gap_hours"]
+                    table_data.constraints.add_course_seminar_order(teacher, which_is_first, time_gap_hours)
+                else:
+                    print(f"Unexpected data format in course_seminar_order: {order_data}")
 
     for values in default_values[0]["classes"]:
         table_data.classrooms.append(Classroom(values))
@@ -259,6 +415,8 @@ if __name__ == "__main__":
     sol_str = ""
     print("\nSolution found:")
     if solution:
+        print(solution)
+
         for var, time_slot in solution.items():
             sol_str += f"{var[0]}: {var[1]} - {var[2]} - {var[3]}: {time_slot}\n"
     else:

@@ -1,6 +1,8 @@
 from datetime import datetime
 from enum import Enum
 
+WEEK_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+
 class Teacher:
     full_name: str
 
@@ -81,6 +83,8 @@ class TimeInterval:
         self.start_time = datetime.strptime(start_time, "%H:%M")
         self.end_time = datetime.strptime(end_time, "%H:%M")
 
+    def time_span(self):
+        return self.end_time.hour - self.start_time.hour
 
     def __repr__(self):
         return f"{self.day_of_week}: {self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
@@ -101,6 +105,11 @@ class TimeInterval:
 
     def __hash__(self):
         return hash((self.day_of_week, self.start_time, self.end_time))
+
+    def __lt__(self, other):
+        self_day_of_week_id = WEEK_DAYS.index(self.day_of_week)
+        other_day_of_week_id = WEEK_DAYS.index(other.day_of_week)
+        return self_day_of_week_id < other_day_of_week_id or (self_day_of_week_id == other_day_of_week_id and self.start_time < other.start_time)
 
 class StudentGroup:
     def __init__(self, year: int, group: str):

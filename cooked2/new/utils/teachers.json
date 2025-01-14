@@ -26,6 +26,10 @@
       "unavailability":
       {
         "Monday": ["08:00-20:00"]
+      },
+      "course_seminary_order": {
+        "first": "seminary",
+        "time_gap_hours": 24
       }
     }
   },
@@ -52,10 +56,14 @@
     "constraints":
     {
       "min_hours": 10,
-      "max_hours": 20,
+      "max_hours": 5,
       "unavailability":
       {
         "Monday": ["08:00-14:00"]
+      },
+      "course_seminary_order": {
+        "first": "course",
+        "time_gap_hours": 0
       }
     }
   },

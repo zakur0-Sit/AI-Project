@@ -7,7 +7,7 @@ class SoftConstraints:
         self.teacher_unavailable = []
         self.teacher_daily_num_of_classes = {}
         self.optional_course_types = []
-        self.course_seminar_order = []
+        self.course_seminary_order = []
 
     def add_teacher_for_course_for_groups(self, teacher: Teacher, course: Course, course_type: SubjectType, groups: list[StudentGroup]):
         self.teacher_for_course_for_groups.append((teacher, course, course_type, groups))
@@ -26,7 +26,7 @@ class SoftConstraints:
         self.optional_course_types.append((course, course_types))
 
     def add_course_seminar_order(self, teacher: Teacher, order: list[SubjectType], time_gap: str):
-        self.course_seminar_order.append((teacher, order, time_gap))
+        self.course_seminary_order.append((teacher, order, time_gap))
 
     def __repr__(self):
         return (f"SoftConstraints:\n"
@@ -35,7 +35,7 @@ class SoftConstraints:
                 f"Unavailable teachers: {self.teacher_unavailable}\n"
                 f"Daily number of classes: {self.teacher_daily_num_of_classes}\n"
                 f"Optional course types: {self.optional_course_types}\n"
-                f"Course seminar order: {self.course_seminar_order}")
+                f"Course seminary order: {self.course_seminary_order}")
 
 
 class TableData:
