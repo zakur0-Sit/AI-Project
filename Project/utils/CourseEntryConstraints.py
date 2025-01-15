@@ -8,6 +8,10 @@ class SoftConstraints:
         self.teacher_daily_num_of_classes = {}
         self.optional_course_types = []
         self.course_seminary_order = []
+        self.students_unavailable = []
+
+    def add_student_unavailable(self, course:Course, time_interval: TimeInterval):
+        self.students_unavailable.append((course, time_interval))
 
     def add_teacher_for_course_for_groups(self, teacher: Teacher, course: Course, course_type: SubjectType, groups: list[StudentGroup]):
         self.teacher_for_course_for_groups.append((teacher, course, course_type, groups))

@@ -81,5 +81,28 @@
         "Wednesday": ["08:00-12:00"]
       }
     }
+  },
+  {
+    "full_name": "students",
+    "unavailability":
+    [
+      {
+        "course": "any",
+        "time": {
+          "Monday": [
+            "08:00-20:00"
+          ]
+        }
+      },
+      {
+        "course": "Animație 3D: algoritmi și tehnici fundamentale",
+        "time": {
+          "Tuesday": [
+            "08:00-12:00"
+          ]
+        }
+      }
+    ]
+
   }
 ]

@@ -8,7 +8,7 @@ from utils.CourseEntryConstraints import TableData
 from collections import deque
 
 def build_ignore_soft_constraints(table_data):
-    ignore_constraints = {"unavailable_time" : [], "daily_num_of_classes" : [], "course_seminary_order" : []}
+    ignore_constraints = {"unavailable_time" : [], "daily_num_of_classes" : [], "course_seminary_order" : [], "unavailable_courses_for_students" : []}
 
     for teacher, _ in table_data.constraints.teacher_unavailable:
         ignore_constraints["unavailable_time"].append(teacher.full_name)
@@ -18,6 +18,9 @@ def build_ignore_soft_constraints(table_data):
 
     for teacher, order, time_gap_hours in table_data.constraints.course_seminary_order:
         ignore_constraints["course_seminary_order"].append(teacher.full_name)
+
+    for course, _ in table_data.constraints.students_unavailable:
+        ignore_constraints["unavailable_courses_for_students"].append(course.name)
 
     return ignore_constraints
 
@@ -161,7 +164,7 @@ def ac3(domain_values):
                 if num_classes > table_data.constraints.teacher_daily_num_of_classes.get(teacher, float('inf')):
                     return False
 
-        # unavailable time constraints
+        # unavailable time for teachers constraints
         teachers_with_unavailability = [teach.full_name for teach, _ in table_data.constraints.teacher_unavailable]
         for teacher in teachers_with_unavailability:
             if "unavailable_time" not in ignore_constraints or teacher not in ignore_constraints["unavailable_time"]:
@@ -170,6 +173,16 @@ def ac3(domain_values):
                     teacher_name = var[1]
                     if teacher_name == teacher and any(
                             time_interval.overlaps(unavailable_time) for _, unavailable_time in table_data.constraints.teacher_unavailable):
+                        return False
+
+        # unavailable courses for students constraints
+        courses_with_unavailability = [course.name for course, _ in table_data.constraints.students_unavailable]
+        for course in courses_with_unavailability:
+            if "unavailable_courses_for_students" not in ignore_constraints or course not in ignore_constraints["unavailable_courses_for_students"]:
+                for var in assignment.keys():
+                    course_name, _, group, _ = var
+                    time_interval, _ = assignment[var]
+                    if (course_name == course or course == "any") and any(time_interval.overlaps(unavailable_time) for _, unavailable_time in table_data.constraints.students_unavailable):
                         return False
 
         return True
@@ -273,6 +286,20 @@ if __name__ == "__main__":
         hard_constraints = json.load(f)
 
     for teacher_data in data:
+        if teacher_data["full_name"] == "students":
+            if "unavailability" in teacher_data:
+                for unavailable_item in teacher_data["unavailability"]:
+                    course = Course(unavailable_item["course"], 0)
+                    time_intervals = unavailable_item["time"]
+                    for weekday, time_span in time_intervals.items():
+                        for hour in time_span:
+                            start_time, end_time = hour.split('-')
+                            time_interval = TimeInterval(weekday, start_time, end_time)
+                            table_data.constraints.add_student_unavailable(course, time_interval)
+
+            continue
+
+
         teacher = Teacher(teacher_data["full_name"])
 
         for subject in teacher_data["subjects"]:
@@ -305,6 +332,8 @@ if __name__ == "__main__":
                     print(" \n This constraint will be skipped.")
 
                 table_data.constraints.add_teacher_daily_num_of_classes(teacher, daily_max_hours)
+
+    print(table_data.constraints.students_unavailable)
 
     for values in default_values[0]["classes"]:
         table_data.classrooms.append(Classroom(values))
