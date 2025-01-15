@@ -136,30 +136,41 @@ def ac3(domain_values):
                 if xi != xj and not arc_constraints_satisfied(xi, assignment[xi], xj, assignment, ignore_constraints):
                     return False
 
-                # other soft constraints that can only be imposed at backtracking, cuz they're not arc like
-                available_teachers_with_daily_maximum_hours = []
-                for teacher in table_data.constraints.teacher_daily_num_of_classes.keys():
-                    if "daily_num_of_classes" not in ignore_constraints or \
-                            teacher not in ignore_constraints.get("daily_num_of_classes", []):
-                        available_teachers_with_daily_maximum_hours.append(teacher)
+        # other soft constraints that can only be imposed at backtracking, cuz they're not arc like
+        available_teachers_with_daily_maximum_hours = []
+        for teacher in table_data.constraints.teacher_daily_num_of_classes.keys():
+            if "daily_num_of_classes" not in ignore_constraints or \
+                    teacher not in ignore_constraints.get("daily_num_of_classes", []):
+                available_teachers_with_daily_maximum_hours.append(teacher)
 
-                teacher_hours_per_day = {}
+        teacher_hours_per_day = {}
+        for var in assignment.keys():
+            time_interval, _ = assignment[var]
+            teacher_name = var[1]
+            if teacher_name not in available_teachers_with_daily_maximum_hours:
+                continue
+
+            if teacher_name not in teacher_hours_per_day:
+                teacher_hours_per_day[teacher_name] = {day: 0 for day in
+                                                       ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]}
+            teacher_hours_per_day[teacher_name][
+                time_interval.day_of_week] += time_interval.time_span()  # num of hours
+
+        for teacher, day_classes in teacher_hours_per_day.items():
+            for day, num_classes in day_classes.items():
+                if num_classes > table_data.constraints.teacher_daily_num_of_classes.get(teacher, float('inf')):
+                    return False
+
+        # unavailable time constraints
+        teachers_with_unavailability = [teach.full_name for teach, _ in table_data.constraints.teacher_unavailable]
+        for teacher in teachers_with_unavailability:
+            if "unavailable_time" not in ignore_constraints or teacher not in ignore_constraints["unavailable_time"]:
                 for var in assignment.keys():
                     time_interval, _ = assignment[var]
                     teacher_name = var[1]
-                    if teacher_name not in available_teachers_with_daily_maximum_hours:
-                        continue
-
-                    if teacher_name not in teacher_hours_per_day:
-                        teacher_hours_per_day[teacher_name] = {day: 0 for day in
-                                                               ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY",
-                                                                "SATURDAY"]}
-                    teacher_hours_per_day[teacher_name][time_interval.day_of_week] += time_interval.time_span() # num of hours
-
-                for teacher, day_classes in teacher_hours_per_day.items():
-                    for day, num_classes in day_classes.items():
-                        if num_classes > table_data.constraints.teacher_daily_num_of_classes.get(teacher, float('inf')):
-                            return False
+                    if teacher_name == teacher and any(
+                            time_interval.overlaps(unavailable_time) for _, unavailable_time in table_data.constraints.teacher_unavailable):
+                        return False
 
         return True
 
@@ -275,7 +286,7 @@ if __name__ == "__main__":
                     for hour in hours:
                         start_time, end_time = hour.split('-')
                         time_interval = TimeInterval(constraint_day, start_time, end_time)
-                        table_data.constraints.add_teacher_unavailable(teacher, f"{time_interval}")
+                        table_data.constraints.add_teacher_unavailable(teacher, time_interval)
 
 
             if "course_seminary_order" in teacher_data["constraints"]:
