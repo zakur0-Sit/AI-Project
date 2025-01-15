@@ -365,7 +365,9 @@ if __name__ == "__main__":
         print(solution)
 
         for var, time_slot in solution.items():
-            sol_str += f"{var[0]}: {var[1]} - {var[2]} - {var[3]}: {time_slot}\n"
+            time_interval, classroom = time_slot
+            day_of_week, time = time_interval.day_of_week, f"{time_interval.start_time.hour:02d}:00 - {time_interval.end_time.hour:02d}:00"
+            sol_str += f"{var[0]} ~ {var[1]} ~ {var[2]} ~ {var[3]} ~ {day_of_week} ~ {time} ~ {classroom}\n"
     else:
         print("No solution found that satisfies all constraints.")
 
