@@ -35,7 +35,7 @@ def read_and_sort_schedule(file_path):
                 continue
 
             match = re.match(
-                r"^(.*?): (.*?) - (.*?) - (.*?): \((.*?): (.*?), '(.*?)'\)$", line
+                r"^(.*?) ~ (.*?) ~ (.*?) ~ (.*?) ~(.*?) ~ (.*?) ~ (.*?)$", line
             )
             if match:
                 title = match.group(1).strip()
@@ -54,14 +54,12 @@ def read_and_sort_schedule(file_path):
     )
     return sorted_courses
 
-# Funcție pentru afișarea tabelului în funcție de profesor
-def show_schedule_by_instructor(selected_instructor, courses, tree):
+# Funcție pentru afișarea tabelului
+def show_schedule(filtered_data, tree):
     for row in tree.get_children():
         tree.delete(row)
 
-    filtered_courses = [course for course in courses if course[1] == selected_instructor]
-
-    for course in filtered_courses:
+    for course in filtered_data:
         day = course[4]
         color = DAY_COLORS.get(day, "white")
 
@@ -81,14 +79,50 @@ def create_schedule_app(file_path):
     frame = ttk.Frame(root)
     frame.pack(fill="both", expand=True)
 
-    # Dropdown pentru selectarea profesorului
-    instructor_label = ttk.Label(frame, text="Selectează Profesorul:")
-    instructor_label.pack(padx=10, pady=5)
+    # Cadru pentru butoane și dropdown
+    top_frame = ttk.Frame(frame)
+    top_frame.pack(fill="x", pady=10)
 
-    instructors = sorted(set(course[1] for course in courses))
-    instructor_var = tk.StringVar()
-    instructor_menu = ttk.Combobox(frame, textvariable=instructor_var, values=instructors, state="readonly", width=100)
-    instructor_menu.pack(padx=10, pady=5)
+    # Butoane pentru schimbarea modului de filtrare
+    filter_var = tk.StringVar(value="professor")
+
+    def update_dropdown():
+        if filter_var.get() == "professor":
+            dropdown_var.set("")
+            dropdown_menu["values"] = sorted(set(course[1] for course in courses))
+        elif filter_var.get() == "days":
+            dropdown_var.set("")
+            dropdown_menu["values"] = sorted(DAY_COLORS.keys(), key=lambda x: day_order[x])
+        elif filter_var.get() == "subject":
+            dropdown_var.set("")
+            dropdown_menu["values"] = sorted(set(course[0] for course in courses))
+
+    def filter_data(event=None):
+        selected_filter = filter_var.get()
+        selected_value = dropdown_var.get()
+
+        if selected_filter == "professor":
+            filtered_courses = [course for course in courses if course[1] == selected_value]
+        elif selected_filter == "days":
+            filtered_courses = [course for course in courses if course[4] == selected_value]
+        elif selected_filter == "subject":
+            filtered_courses = [course for course in courses if course[0] == selected_value]
+        else:
+            filtered_courses = courses
+
+        show_schedule(filtered_courses, tree)
+
+    ttk.Button(top_frame, text="Days", command=lambda: filter_var.set("days") or update_dropdown()).pack(side="left", padx=5)
+    ttk.Button(top_frame, text="Professor", command=lambda: filter_var.set("professor") or update_dropdown()).pack(side="left", padx=5)
+    ttk.Button(top_frame, text="Subject", command=lambda: filter_var.set("subject") or update_dropdown()).pack(side="left", padx=5)
+
+    # Dropdown pentru selectarea valorii filtrului
+    dropdown_var = tk.StringVar()
+    dropdown_menu = ttk.Combobox(top_frame, textvariable=dropdown_var, state="readonly", width=80)
+    dropdown_menu.pack(side="left", padx=10)
+    dropdown_menu.bind("<<ComboboxSelected>>", filter_data)
+
+    update_dropdown()
 
     # Tabelul (Treeview)
     columns = ("Disciplina", "Profesor", "Grup", "Activitate", "Ziua", "Interval", "Sala")
@@ -104,13 +138,6 @@ def create_schedule_app(file_path):
     scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
     tree.configure(yscroll=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
-
-    # Legăm selecția din meniu de actualizarea tabelului
-    def on_instructor_select(event):
-        selected_instructor = instructor_var.get()
-        show_schedule_by_instructor(selected_instructor, courses, tree)
-
-    instructor_menu.bind("<<ComboboxSelected>>", on_instructor_select)
 
     root.mainloop()
 
