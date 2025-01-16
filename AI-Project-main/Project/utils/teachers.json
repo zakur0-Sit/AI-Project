@@ -1,0 +1,49 @@
+[
+  {
+    "full_name": "Vitcu Anca",
+    "subjects": [],
+    "constraints": {
+      "max_hours": 20,
+      "unavailability": {
+        "Friday": [
+          "08:00-12:00"
+        ]
+      },
+      "course_seminary_order": null
+    }
+  },
+  {
+    "full_name": "Gavriluț Dragoș",
+    "subjects": [],
+    "constraints": {
+      "max_hours": 4,
+      "unavailability": {},
+      "course_seminary_order": null
+    }
+  },
+  {
+    "full_name": "Țiplea Ferucio Laurențiu",
+    "subjects": [],
+    "constraints": {
+      "max_hours": 20,
+      "unavailability": {},
+      "course_seminary_order": {
+        "first": "course",
+        "time_gap_hours": 24
+      }
+    }
+  },
+  {
+    "full_name": "students",
+    "unavailability": [
+      {
+        "course": "any",
+        "time": {
+          "Monday": [
+            "08:00-20:00"
+          ]
+        }
+      }
+    ]
+  }
+]
