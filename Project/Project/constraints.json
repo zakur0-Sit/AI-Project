@@ -1,0 +1,23 @@
+{
+    "professor_constraints": [
+        [
+            "Vitcu Anca",
+            "I don't wanna have classes on Friday mornings."
+        ],
+        [
+            "\u021aiplea Ferucio Lauren\u021biu",
+            "I want to have a maximum of 6 hours of classes per day."
+        ],
+        [
+            "Gavrilu\u021b Drago\u0219",
+            "I need to have the course a day before the seminar for my classes."
+        ]
+    ],
+    "student_constraints": [
+        "I can't come to classes on Mondays.",
+        "I prefer to not have classes Monday.",
+        "I don't want to have classes on Mondays.",
+        "I don't want to attend Monday.",
+        "There wouldn't be nice to have classes on Monday."
+    ]
+}
